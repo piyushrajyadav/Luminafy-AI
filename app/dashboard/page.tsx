@@ -14,29 +14,44 @@ import { GlowCard } from '@/components/ui/spotlight-card'
 export default function DashboardPage() {
   const [user, setUser] = useState<SupabaseUser | null>(null)
   const [loading, setLoading] = useState(true)
+  const [mounted, setMounted] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!mounted) return
+
+    const supabase = createClient()
+    
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          router.push('/login')
+        } else {
+          setUser(user)
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error)
         router.push('/login')
-      } else {
-        setUser(user)
+      } finally {
+        setLoading(false)
       }
-      setLoading(false)
     }
 
     getUser()
-  }, [supabase, router])
+  }, [mounted, router])
 
   const handleLogout = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/')
   }
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <div className="min-h-screen bg-gray-950 relative flex items-center justify-center">
         <DottedSurface />
